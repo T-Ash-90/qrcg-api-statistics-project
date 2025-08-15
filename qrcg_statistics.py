@@ -1,4 +1,6 @@
 import requests
+import csv
+import re
 from rich.console import Console
 from rich.prompt import Prompt
 from rich.panel import Panel
@@ -7,11 +9,17 @@ from datetime import datetime
 # Initialize console
 console = Console()
 
+# Function to remove rich text formatting (like [bold], [italic], etc.)
+def remove_rich_formatting(text):
+    # Remove all rich text formatting tags (e.g., [bold], [italic], etc.)
+    return re.sub(r'\[.*?\]', '', text)
+
 def fetch_qr_codes(access_token, start_date, end_date):
     base_url = f"https://api.qr-code-generator.com/v1/codes?access-token={access_token}"
     qr_codes = []
     page = 1  # Starting with the first page
     total_scans_all_time = 0  # Variable to hold total scans for all QR codes
+    qr_code_data = []  # List to store QR code data for CSV export
 
     while True:
         # Construct the URL with pagination (page number)
@@ -56,12 +64,19 @@ def fetch_qr_codes(access_token, start_date, end_date):
     # Loop through each QR code and display the required fields
     for qr in qr_codes:
         created = qr.get("created", "N/A")
-        title = qr.get("title", "Untitled")
+        title = qr.get("title", None)  # Get the title if it exists, else None
         short_url = qr.get("short_url", "")
         target_url = qr.get("target_url")
         type_name = qr.get("type_name", "Unknown")
         total_scans = qr.get("total_scans", 0)
         unique_scans = qr.get("unique_scans", 0)
+
+        # If no title, use target URL or QR code type as the title
+        if not title:
+            if target_url:
+                title = target_url  # Use the target URL as the title if no title exists
+            else:
+                title = f"My {type_name}"  # Use the type name as the title if no target URL exists
 
         # Parse the 'created' date field (handle both formats)
         try:
@@ -78,19 +93,15 @@ def fetch_qr_codes(access_token, start_date, end_date):
                 if qr_date < start_date or qr_date > end_date:
                     continue  # Skip this QR code if it's outside the date range
 
-        # Handle missing short URL (Static QR Code)
+        # Exclude the fallback logic for CSV export
         if not short_url:
-            short_url = "[italic red]No Short URL - This is a Static QR Code[/italic red]"
-            total_scans = "[italic red]N/A[/italic red]"  # No scans for static QR codes
-            unique_scans = "[italic red]N/A[/italic red]"  # No unique scans for static QR codes
-
-        # Handle missing target URL
+            short_url = ""  # Skip the fallback message for missing short URL
         if not target_url:
-            target_url_display = f"[italic red]No Target URL, as this is a {type_name} QR Code[/italic red]"
+            target_url_display = ""  # Skip the fallback message for missing target URL
         else:
             target_url_display = target_url
 
-        # Format the output in the desired order
+        # Format the output in the desired order (only for displaying, not CSV export)
         output = (
             f"[bold]Created:[/bold] {created}\n"
             f"[bold]Title:[/bold] {title}\n"
@@ -104,12 +115,42 @@ def fetch_qr_codes(access_token, start_date, end_date):
         # Display the result in a nice panel format
         console.print(Panel(output, title=f"QR Code: {title}", expand=False))
 
+        # Store the data for CSV export (skip fallbacks)
+        qr_code_data.append({
+            "Created": remove_rich_formatting(created),
+            "Title": remove_rich_formatting(title),  # Title is now dynamically set
+            "Short URL": remove_rich_formatting(short_url),  # Exclude rich fallback
+            "Target URL": remove_rich_formatting(target_url_display),  # Exclude rich fallback
+            "Type": remove_rich_formatting(type_name),
+            "Total Scans": remove_rich_formatting(str(total_scans)),
+            "Unique Scans": remove_rich_formatting(str(unique_scans)),
+        })
+
         # Sum up the total scans for all QR codes
         if isinstance(total_scans, int):
             total_scans_all_time += total_scans
 
     # Display the total scans summary
     console.print(f"\n[bold green]Total Scans for all QR Codes: {total_scans_all_time}[/bold green]")
+
+    # Ask the user if they want to download the data as CSV
+    download_csv = Prompt.ask("[bold cyan]Do you want to download the data as CSV? (y/n)", default=None)
+
+    # If no input, assume 'n'
+    if download_csv is None:
+        download_csv = 'n'
+
+    if download_csv.lower() == "y":
+        # Define the CSV file name
+        filename = f"qr_codes_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv"
+
+        # Write the data to a CSV file
+        with open(filename, mode='w', newline='') as file:
+            writer = csv.DictWriter(file, fieldnames=qr_code_data[0].keys())
+            writer.writeheader()
+            writer.writerows(qr_code_data)
+
+        console.print(f"[bold green]CSV file '{filename}' has been successfully saved![/bold green]")
 
 if __name__ == "__main__":
     console.print("[bold cyan]QR Code Generator API Data Fetcher[/bold cyan]")

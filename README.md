@@ -13,10 +13,12 @@ A simple Python script that fetches QR code data from the [QR Code Generator API
   - Type
   - Total scans
   - Unique scans
-- Handles missing target URLs by displaying a fallback message.
-- **Filter QR codes by date range**: You can now filter QR codes based on a start and end date.
+- Handles missing target URLs and short URLs by displaying a fallback message in the terminal (not included in CSV export).
+- **Filter QR codes by date range**: You can now filter QR codes based on their creation date.
   - The default date range is "all time," but you can specify a custom start and end date in the format `YYYY-MM-DD`.
 - **Total scans summary**: Displays the total number of scans for all QR codes within the selected date range or for all QR codes if no range is specified.
+- **CSV Export**: Allows exporting the fetched QR code data to a CSV file. The CSV will exclude rich text formatting, and will only include relevant data, excluding fallback messages.
+- **Title handling**: If a QR code does not have a "Title" field, the script will use the "Target URL" as the title. If neither is available, the title will default to "My (QR CODE TYPE)".
 
 ---
 
@@ -29,15 +31,14 @@ A simple Python script that fetches QR code data from the [QR Code Generator API
 
 You can install the necessary dependencies using `pip`:
 
-  pip install requests rich
+pip install requests rich
 
 ---
 
 ## Setup
 
-1. Clone the repository or download the script
-
-2. Ensure you have your **QR Code Generator API access token**. You can get it from [QR Code Generator's API section](https://www.qr-code-generator.com/). The token is required for authenticating API requests.
+1. Clone the repository or download the script.
+2. Ensure you have your **QR Code Generator API access token**. You can get it from your paid QRCG account [QR Code Generator's API section](https://www.qr-code-generator.com/). The token is required for authenticating API requests.
 
 ---
 
@@ -45,13 +46,13 @@ You can install the necessary dependencies using `pip`:
 
 1. Run the script:
 
-    python3 qrcg_statistics.py
+python3 qrcg_statistics.py
 
 2. The script will prompt you to **enter your API access token**:
 
     🔑 Enter your API access token
 
-   Paste your token and press `Enter`.
+    Paste your token and press `Enter`.
 
 3. The script will then prompt you to **enter a start and end date** for filtering the QR codes (or leave the fields blank for "all time"):
 
@@ -60,7 +61,7 @@ You can install the necessary dependencies using `pip`:
 
 4. The script will fetch and display all your QR codes, formatted as follows:
    - **Created**: The date and time when the QR code was created.
-   - **Title**: The title of the QR code.
+   - **Title**: The title of the QR code (or the target URL if no title is present, or `"My (QR CODE TYPE)"` if neither exists).
    - **Short URL**: A shortened URL for the QR code.
    - **Target URL**: The target URL the QR code redirects to (or a fallback message if it’s missing).
    - **Type**: The type of the QR code (e.g., URL, SMS, etc.).
@@ -71,7 +72,26 @@ You can install the necessary dependencies using `pip`:
 
     No Target URL, as this is a <Type> QR Code
 
-5. After displaying all the QR codes, the script will show the **total scans** across all QR codes within the date range you specified (or for all time if no range is set).
+5. After displaying all the QR codes, the script will show the **total scans** across all QR codes that were created within the date range you specified (or for all time if no range is set).
+
+---
+
+## CSV Export
+
+After displaying the QR code data in the terminal, the script will prompt if you want to export the data to a CSV file:
+
+    Do you want to download the data as CSV? (y/n)
+
+If you choose `y`, the script will create a CSV file with the following columns:
+- **Created**: The creation date of the QR code.
+- **Title**: The title of the QR code.
+- **Short URL**: The short URL for the QR code.
+- **Target URL**: The target URL for the QR code.
+- **Type**: The type of the QR code (e.g., URL, SMS, etc.).
+- **Total Scans**: Total number of scans.
+- **Unique Scans**: Number of unique scans.
+
+The CSV will exclude any rich text formatting, and will not include fallback messages like "No Target URL, as this is a SMS QR Code". It also excludes any missing URLs in the exported data.
 
 ---
 
@@ -100,7 +120,7 @@ You can install the necessary dependencies using `pip`:
     Total Scans: 200
     Unique Scans: 150
 
-    [bold green]Total Scans for all QR Codes: 300[/bold green]
+    Total Scans for all QR Codes: 300
 
 ---
 
@@ -108,7 +128,8 @@ You can install the necessary dependencies using `pip`:
 
 - The script **automatically handles pagination** if there are more than 20 QR codes in your account, fetching all pages of results.
 - If no QR codes are found, the script will print "No QR codes found."
-- You can **filter QR codes by date range** by entering specific start and end dates (in `YYYY-MM-DD` format). If no date range is provided, the script will consider all QR codes ever created.
+- You can **filter QR codes by date - created** by entering specific start and end dates (in `YYYY-MM-DD` format). If no date range is provided, the script will consider all QR codes ever created.
+- The script **allows you to export data as CSV**. The CSV export excludes rich text formatting and fallback messages.
 - The API limits the number of requests you can make, so be mindful of your request rate.
 
 ---
@@ -116,5 +137,5 @@ You can install the necessary dependencies using `pip`:
 ## Troubleshooting
 
 - If you encounter any errors related to the API request, double-check your API access token and ensure it’s valid.
-- If the script doesn't return all the QR codes, make sure you have more than 20 QR codes and check for any pagination issues.
+- If the script doesn't return all the QR codes, check for any pagination issues.
 - If you get an error related to date parsing, make sure your date inputs are in the correct format (`YYYY-MM-DD`).
