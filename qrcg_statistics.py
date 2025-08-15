@@ -4,6 +4,7 @@ import re
 from rich.console import Console
 from rich.prompt import Prompt
 from rich.panel import Panel
+from rich.progress import track
 from datetime import datetime
 
 # Initialize console
@@ -11,142 +12,130 @@ console = Console()
 
 # Function to remove rich text formatting (like [bold], [italic], etc.)
 def remove_rich_formatting(text):
-    # Remove all rich text formatting tags (e.g., [bold], [italic], etc.)
     return re.sub(r'\[.*?\]', '', text)
 
 def fetch_qr_codes(access_token, start_date, end_date):
+    static_qr_count = 0
+    dynamic_qr_count = 0
     base_url = f"https://api.qr-code-generator.com/v1/codes?access-token={access_token}"
     qr_codes = []
-    page = 1  # Starting with the first page
-    total_scans_all_time = 0  # Variable to hold total scans for all QR codes
-    qr_code_data = []  # List to store QR code data for CSV export
+    page = 1
+    total_scans_all_time = 0
+    qr_code_data = []
 
     while True:
-        # Construct the URL with pagination (page number)
         url = f"{base_url}&page={page}"
-
         try:
             response = requests.get(url)
-
             if response.status_code != 200:
-                console.print(Panel.fit(f"[red]Failed to fetch QR codes[/red]\n[bold]Status Code:[/bold] {response.status_code}\n[bold]Response:[/bold] {response.text}"))
+                console.print(Panel.fit(
+                    f"[red]Failed to fetch QR codes[/red]\n[bold]Status Code:[/bold] {response.status_code}\n[bold]Response:[/bold] {response.text}"))
                 return
 
-            # Get the response data
             data = response.json()
-
-            # Check if data is a list (instead of a dictionary)
-            if isinstance(data, list):
-                qr_codes_page = data
-            elif isinstance(data, dict):
-                qr_codes_page = data.get("data", [])
-            else:
-                console.print("[red]Unexpected data format![/red]")
-                return
-
+            qr_codes_page = data if isinstance(data, list) else data.get("data", [])
             if not qr_codes_page:
                 console.print("[yellow]No QR codes found.[/yellow]")
                 return
 
-            # Add the current page's QR codes to the overall list
             qr_codes.extend(qr_codes_page)
-
-            # Check if there is a next page, if not, break the loop
-            if len(qr_codes_page) < 20:  # Assuming 20 is the max number of QR codes per page
-                break  # No more pages to fetch
+            if len(qr_codes_page) < 20:
+                break
             else:
-                page += 1  # Move to the next page
-
+                page += 1
         except Exception as e:
             console.print(f"[bold red]An error occurred:[/bold red] {e}")
             break
 
-    # Loop through each QR code and display the required fields
-    for qr in qr_codes:
+    # Process QR codes with progress bar
+    for qr in track(qr_codes, description="Processing..."):
         created = qr.get("created", "N/A")
-        title = qr.get("title", None)  # Get the title if it exists, else None
+        title = qr.get("title", None)
         short_url = qr.get("short_url", "")
         target_url = qr.get("target_url")
         type_name = qr.get("type_name", "Unknown")
         total_scans = qr.get("total_scans", 0)
         unique_scans = qr.get("unique_scans", 0)
 
-        # If no title, use target URL or QR code type as the title
-        if not title:
-            if target_url:
-                title = target_url  # Use the target URL as the title if no title exists
-            else:
-                title = f"My {type_name}"  # Use the type name as the title if no target URL exists
+        is_dynamic = bool(short_url)
+        qr_code_type = "Dynamic" if is_dynamic else "Static"
+        qr_type_display = f"{qr_code_type} - {type_name}"
 
-        # Parse the 'created' date field (handle both formats)
+        if not title:
+            title = target_url if target_url else f"My {type_name}"
+
         try:
-            if 'T' in created:  # If the format is '2023-08-11T13:13:29.123Z'
+            if 'T' in created:
                 qr_date = datetime.strptime(created, "%Y-%m-%dT%H:%M:%S.%fZ")
-            else:  # If the format is '2025-08-11 13:13:29'
+            else:
                 qr_date = datetime.strptime(created, "%Y-%m-%d %H:%M:%S")
         except ValueError:
-            qr_date = None  # If parsing fails, skip this QR code
+            qr_date = None
 
-        # If the QR code is within the date range, process it
-        if qr_date:
-            if start_date != "all time" and end_date != "all time":
-                if qr_date < start_date or qr_date > end_date:
-                    continue  # Skip this QR code if it's outside the date range
+        if qr_date and start_date != "all time" and end_date != "all time":
+            if qr_date < start_date or qr_date > end_date:
+                continue
 
-        # Exclude the fallback logic for CSV export
-        if not short_url:
-            short_url = ""  # Skip the fallback message for missing short URL
-        if not target_url:
-            target_url_display = ""  # Skip the fallback message for missing target URL
+        if is_dynamic:
+            dynamic_qr_count += 1
+            hide_scans = False
         else:
-            target_url_display = target_url
+            static_qr_count += 1
+            hide_scans = True
 
-        # Format the output in the desired order (only for displaying, not CSV export)
+        short_url_display = short_url if short_url else "[red]No Short URL - Static QR Code[/red]"
+        target_url_display = target_url if target_url else f"[red]No Target URL - {type_name} QR Code[/red]"
+
         output = (
-            f"[bold]Created:[/bold] {created}\n"
-            f"[bold]Title:[/bold] {title}\n"
-            f"[bold]Short URL:[/bold] {short_url}\n"
-            f"[bold]Target URL:[/bold] {target_url_display}\n"
-            f"[bold]Type:[/bold] {type_name}\n"
-            f"[bold]Total Scans:[/bold] {total_scans}\n"
-            f"[bold]Unique Scans:[/bold] {unique_scans}"
+            f"[bold]Created:[/bold] [magenta]{created}[/magenta]\n"
+            f"[bold]Short URL:[/bold] [blue]{short_url_display}[/blue]\n"
+            f"[bold]Target URL:[/bold] [blue]{target_url_display}[/blue]\n"
+            f"[bold]Type:[/bold] {qr_type_display}\n"
         )
 
-        # Display the result in a nice panel format
-        console.print(Panel(output, title=f"QR Code: {title}", expand=False))
+        if not hide_scans:
+            output += (
+                f"[bold]Total Scans:[/bold] {total_scans}\n"
+                f"[bold]Unique Scans:[/bold] {unique_scans}\n"
+            )
 
-        # Store the data for CSV export (skip fallbacks)
-        qr_code_data.append({
+        console.print()
+        console.print(Panel(output, title=f"{title}", expand=False))
+
+        row = {
             "Created": remove_rich_formatting(created),
-            "Title": remove_rich_formatting(title),  # Title is now dynamically set
-            "Short URL": remove_rich_formatting(short_url),  # Exclude rich fallback
-            "Target URL": remove_rich_formatting(target_url_display),  # Exclude rich fallback
-            "Type": remove_rich_formatting(type_name),
-            "Total Scans": remove_rich_formatting(str(total_scans)),
-            "Unique Scans": remove_rich_formatting(str(unique_scans)),
-        })
+            "Title": remove_rich_formatting(title),
+            "Short URL": remove_rich_formatting(short_url),
+            "Target URL": remove_rich_formatting(target_url),
+            "Solution Type": remove_rich_formatting(type_name),
+            "QR Code Type": qr_code_type,
+            "Total Scans": remove_rich_formatting(str(total_scans)) if is_dynamic else "",
+            "Unique Scans": remove_rich_formatting(str(unique_scans)) if is_dynamic else "",
+        }
 
-        # Sum up the total scans for all QR codes
-        if isinstance(total_scans, int):
+        qr_code_data.append(row)
+
+        if is_dynamic and isinstance(total_scans, int):
             total_scans_all_time += total_scans
 
-    # Display the total scans summary
-    console.print(f"\n[bold green]Total Scans for all QR Codes: {total_scans_all_time}[/bold green]")
+    console.print(f"\n[bold blue]Total Static QR Codes: {static_qr_count}[/bold blue]")
+    console.print(f"[bold blue]Total Dynamic QR Codes: {dynamic_qr_count}[/bold blue]")
+    console.print(f"\n[bold magenta]Total Scans for all QR Codes: {total_scans_all_time}[/bold magenta]\n")
 
-    # Ask the user if they want to download the data as CSV
     download_csv = Prompt.ask("[bold cyan]Do you want to download the data as CSV? (y/n)", default=None)
-
-    # If no input, assume 'n'
     if download_csv is None:
         download_csv = 'n'
 
     if download_csv.lower() == "y":
-        # Define the CSV file name
         filename = f"qr_codes_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv"
+        fieldnames = [
+            "Created", "Title", "Short URL", "Target URL",
+            "Solution Type", "QR Code Type",
+            "Total Scans", "Unique Scans"
+        ]
 
-        # Write the data to a CSV file
         with open(filename, mode='w', newline='') as file:
-            writer = csv.DictWriter(file, fieldnames=qr_code_data[0].keys())
+            writer = csv.DictWriter(file, fieldnames=fieldnames)
             writer.writeheader()
             writer.writerows(qr_code_data)
 
@@ -155,23 +144,19 @@ def fetch_qr_codes(access_token, start_date, end_date):
 if __name__ == "__main__":
     console.print("[bold cyan]QR Code Generator API Data Fetcher[/bold cyan]")
 
-    # Ask the user for the API key
     access_token = Prompt.ask("🔑 Enter your API access token")
 
-    # Ask for the date range (defaults to 'all time' if not specified)
-    start_date_input = Prompt.ask("📅 Enter start date (YYYY-MM-DD) or leave blank for all time", default="all time")
-    end_date_input = Prompt.ask("📅 Enter end date (YYYY-MM-DD) or leave blank for all time", default="all time")
+    start_date_input = Prompt.ask("📅 Enter QR Code creation start date (YYYY-MM-DD) or leave blank for", default="all time")
+    end_date_input = Prompt.ask("📅 Enter QR Code creation end date (YYYY-MM-DD) or leave blank for", default="all time")
 
-    # If user provides a valid date range, convert them to datetime objects
     if start_date_input != "all time":
         start_date = datetime.strptime(start_date_input, "%Y-%m-%d")
     else:
-        start_date = "all time"  # Keep as 'all time' if the user doesn't specify a start date
+        start_date = "all time"
 
     if end_date_input != "all time":
         end_date = datetime.strptime(end_date_input, "%Y-%m-%d")
     else:
-        end_date = "all time"  # Keep as 'all time' if the user doesn't specify an end date
+        end_date = "all time"
 
-    # Fetch QR codes and show the data
     fetch_qr_codes(access_token, start_date, end_date)
