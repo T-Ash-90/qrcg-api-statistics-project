@@ -35,10 +35,7 @@ You can install the necessary dependencies using `pip`:
 
 ## Setup
 
-1. Clone the repository or download the script:
-
-    git clone <repository-url>
-    cd <repository-directory>
+1. Clone the repository or download the script
 
 2. Ensure you have your **QR Code Generator API access token**. You can get it from [QR Code Generator's API section](https://www.qr-code-generator.com/). The token is required for authenticating API requests.
 
@@ -48,7 +45,7 @@ You can install the necessary dependencies using `pip`:
 
 1. Run the script:
 
-    python3 qr_code_fetcher.py
+    python3 qrcg_statistics.py
 
 2. The script will prompt you to **enter your API access token**:
 
