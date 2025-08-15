@@ -55,15 +55,21 @@ def fetch_qr_codes(access_token):
     for qr in qr_codes:
         created = qr.get("created", "N/A")
         title = qr.get("title", "Untitled")
-        short_url = qr.get("short_url", "N/A")
+        short_url = qr.get("short_url", "")
         target_url = qr.get("target_url")
         type_name = qr.get("type_name", "Unknown")
         total_scans = qr.get("total_scans", 0)
         unique_scans = qr.get("unique_scans", 0)
 
+        # Handle missing short URL (Static QR Code)
+        if not short_url:
+            short_url = "[italic red]No Short URL - This is a Static QR Code[/italic red]"
+            total_scans = "[italic red]N/A[/italic red]"  # No scans for static QR codes
+            unique_scans = "[italic red]N/A[/italic red]"  # No unique scans for static QR codes
+
         # Handle missing target URL
         if not target_url:
-            target_url_display = f"[italic yellow]No Target URL, as this is a {type_name} QR Code[/italic yellow]"
+            target_url_display = f"[italic red]No Target URL - This is a {type_name} QR Code[/italic red]"
         else:
             target_url_display = target_url
 
