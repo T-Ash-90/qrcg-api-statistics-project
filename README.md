@@ -1,1 +1,110 @@
-# qrcg-api-statistics-project
+# QR Code Generator API Data Fetcher
+
+A simple Python script that fetches QR code data from the [QR Code Generator API](https://www.qr-code-generator.com/), parses the data, and displays it in a clean and readable format in the terminal.
+
+### Features:
+- Fetches a list of QR codes from your account.
+- Supports pagination to retrieve all QR codes (even beyond the first 20).
+- Displays QR code information, including:
+  - Created date
+  - Title
+  - Short URL
+  - Target URL
+  - Type
+  - Total scans
+  - Unique scans
+- Handles missing target URLs by displaying a fallback message.
+
+---
+
+## Requirements
+
+- **Python 3.6+**
+- **Required Libraries**:
+  - `requests`: For making API requests.
+  - `rich`: For formatting and displaying output in the terminal.
+
+You can install the necessary dependencies using `pip`:
+
+    pip install requests rich
+
+---
+
+## Setup
+
+1. Clone the repository or download the script:
+
+    git clone <repository-url>
+    cd <repository-directory>
+
+2. Ensure you have your **QR Code Generator API access token**. You can get it from [QR Code Generator's API section](https://www.qr-code-generator.com/). The token is required for authenticating API requests.
+
+---
+
+## Usage
+
+1. Run the script:
+
+    python3 qr_code_fetcher.py
+
+2. The script will prompt you to **enter your API access token**:
+
+    🔑 Enter your API access token
+
+   Paste your token and press `Enter`.
+
+3. The script will fetch and display all your QR codes, formatted as follows:
+
+   - **Created**: The date and time when the QR code was created.
+   - **Title**: The title of the QR code.
+   - **Short URL**: A shortened URL for the QR code.
+   - **Target URL**: The target URL the QR code redirects to (or a fallback message if it’s missing).
+   - **Type**: The type of the QR code (e.g., URL, SMS, etc.).
+   - **Total Scans**: Total number of scans for the QR code.
+   - **Unique Scans**: Number of unique scans.
+
+   If any QR code does not have a **target URL**, the script will display:
+
+    No Target URL, as this is a <Type> QR Code
+
+---
+
+## Example Output:
+
+    QR Code Generator API Data Fetcher
+    Enter your API access token: ***************
+
+    📦 Sample QR Code Title
+    ────────────────────────────────────────
+    Created: 2023-08-15T10:22:30Z
+    Title: Sample QR Code Title
+    Short URL: https://short.url/sample
+    Target URL: https://example.com
+    Type: URL
+    Total Scans: 100
+    Unique Scans: 50
+
+    📦 Another QR Code Title
+    ────────────────────────────────────────
+    Created: 2023-08-14T08:10:20Z
+    Title: Another QR Code Title
+    Short URL: https://short.url/another
+    Target URL: No Target URL, as this is a SMS QR Code
+    Type: SMS
+    Total Scans: 200
+    Unique Scans: 150
+
+---
+
+## Notes
+
+- The script **automatically handles pagination** if there are more than 20 QR codes in your account, fetching all pages of results.
+- If no QR codes are found, the script will print "No QR codes found."
+- The API limits the number of requests you can make, so be mindful of your request rate.
+
+---
+
+## Troubleshooting
+
+- If you encounter any errors related to the API request, double-check your API access token and ensure it’s valid.
+- If the script doesn't return all the QR codes, make sure you have more than 20 QR codes and check for any pagination issues.
