@@ -2,14 +2,16 @@ import requests
 from rich.console import Console
 from rich.prompt import Prompt
 from rich.panel import Panel
+from datetime import datetime
 
 # Initialize console
 console = Console()
 
-def fetch_qr_codes(access_token):
+def fetch_qr_codes(access_token, start_date, end_date):
     base_url = f"https://api.qr-code-generator.com/v1/codes?access-token={access_token}"
     qr_codes = []
     page = 1  # Starting with the first page
+    total_scans_all_time = 0  # Variable to hold total scans for all QR codes
 
     while True:
         # Construct the URL with pagination (page number)
@@ -61,6 +63,21 @@ def fetch_qr_codes(access_token):
         total_scans = qr.get("total_scans", 0)
         unique_scans = qr.get("unique_scans", 0)
 
+        # Parse the 'created' date field (handle both formats)
+        try:
+            if 'T' in created:  # If the format is '2023-08-11T13:13:29.123Z'
+                qr_date = datetime.strptime(created, "%Y-%m-%dT%H:%M:%S.%fZ")
+            else:  # If the format is '2025-08-11 13:13:29'
+                qr_date = datetime.strptime(created, "%Y-%m-%d %H:%M:%S")
+        except ValueError:
+            qr_date = None  # If parsing fails, skip this QR code
+
+        # If the QR code is within the date range, process it
+        if qr_date:
+            if start_date != "all time" and end_date != "all time":
+                if qr_date < start_date or qr_date > end_date:
+                    continue  # Skip this QR code if it's outside the date range
+
         # Handle missing short URL (Static QR Code)
         if not short_url:
             short_url = "[italic red]No Short URL - This is a Static QR Code[/italic red]"
@@ -69,7 +86,7 @@ def fetch_qr_codes(access_token):
 
         # Handle missing target URL
         if not target_url:
-            target_url_display = f"[italic red]No Target URL - This is a {type_name} QR Code[/italic red]"
+            target_url_display = f"[italic red]No Target URL, as this is a {type_name} QR Code[/italic red]"
         else:
             target_url_display = target_url
 
@@ -87,7 +104,33 @@ def fetch_qr_codes(access_token):
         # Display the result in a nice panel format
         console.print(Panel(output, title=f"QR Code: {title}", expand=False))
 
+        # Sum up the total scans for all QR codes
+        if isinstance(total_scans, int):
+            total_scans_all_time += total_scans
+
+    # Display the total scans summary
+    console.print(f"\n[bold green]Total Scans for all QR Codes: {total_scans_all_time}[/bold green]")
+
 if __name__ == "__main__":
     console.print("[bold cyan]QR Code Generator API Data Fetcher[/bold cyan]")
+
+    # Ask the user for the API key
     access_token = Prompt.ask("🔑 Enter your API access token")
-    fetch_qr_codes(access_token)
+
+    # Ask for the date range (defaults to 'all time' if not specified)
+    start_date_input = Prompt.ask("📅 Enter start date (YYYY-MM-DD) or leave blank for all time", default="all time")
+    end_date_input = Prompt.ask("📅 Enter end date (YYYY-MM-DD) or leave blank for all time", default="all time")
+
+    # If user provides a valid date range, convert them to datetime objects
+    if start_date_input != "all time":
+        start_date = datetime.strptime(start_date_input, "%Y-%m-%d")
+    else:
+        start_date = "all time"  # Keep as 'all time' if the user doesn't specify a start date
+
+    if end_date_input != "all time":
+        end_date = datetime.strptime(end_date_input, "%Y-%m-%d")
+    else:
+        end_date = "all time"  # Keep as 'all time' if the user doesn't specify an end date
+
+    # Fetch QR codes and show the data
+    fetch_qr_codes(access_token, start_date, end_date)
