@@ -7,10 +7,8 @@ from rich.panel import Panel
 from rich.progress import track
 from datetime import datetime
 
-# Initialize console
 console = Console()
 
-# Function to remove rich text formatting (like [bold], [italic], etc.)
 def remove_rich_formatting(text):
     return re.sub(r'\[.*?\]', '', text)
 
@@ -23,32 +21,32 @@ def fetch_qr_codes(access_token, start_date, end_date):
     total_scans_all_time = 0
     qr_code_data = []
 
-    while True:
-        url = f"{base_url}&page={page}"
-        try:
-            response = requests.get(url)
-            if response.status_code != 200:
-                console.print(Panel.fit(
-                    f"[red]Failed to fetch QR codes[/red]\n[bold]Status Code:[/bold] {response.status_code}\n[bold]Response:[/bold] {response.text}"))
-                return
+    max_pages = 9999
 
-            data = response.json()
-            qr_codes_page = data if isinstance(data, list) else data.get("data", [])
-            if not qr_codes_page:
-                console.print("[yellow]No QR codes found.[/yellow]")
-                return
+    with console.status("[bold green]Fetching QR codes...") as status:
+        for page in track(range(1, max_pages + 1), description="Fetching pages", total=max_pages):
+            url = f"{base_url}&page={page}"
+            try:
+                response = requests.get(url)
+                if response.status_code != 200:
+                    console.print(Panel.fit(
+                        f"[red]Failed to fetch QR codes[/red]\n[bold]Status Code:[/bold] {response.status_code}\n[bold]Response:[/bold] {response.text}"))
+                    return
 
-            qr_codes.extend(qr_codes_page)
-            if len(qr_codes_page) < 20:
+                data = response.json()
+                qr_codes_page = data if isinstance(data, list) else data.get("data", [])
+                if not qr_codes_page:
+                    console.print("[yellow]No QR codes found.[/yellow]")
+                    return
+
+                qr_codes.extend(qr_codes_page)
+                if len(qr_codes_page) < 20:
+                    break
+            except Exception as e:
+                console.print(f"[bold red]An error occurred while fetching page {page}:[/bold red] {e}")
                 break
-            else:
-                page += 1
-        except Exception as e:
-            console.print(f"[bold red]An error occurred:[/bold red] {e}")
-            break
 
-    # Process QR codes with progress bar
-    for qr in track(qr_codes, description="Processing..."):
+    for qr in track(qr_codes, description="Processing QR codes..."):
         created = qr.get("created", "N/A")
         title = qr.get("title", None)
         short_url = qr.get("short_url", "")
@@ -87,16 +85,17 @@ def fetch_qr_codes(access_token, start_date, end_date):
         target_url_display = target_url if target_url else f"[red]No Target URL - {type_name} QR Code[/red]"
 
         output = (
-            f"[bold]Created:[/bold] [magenta]{created}[/magenta]\n"
-            f"[bold]Short URL:[/bold] [blue]{short_url_display}[/blue]\n"
-            f"[bold]Target URL:[/bold] [blue]{target_url_display}[/blue]\n"
-            f"[bold]Type:[/bold] {qr_type_display}\n"
+            f"[bold]Created:[/bold] [white]{created}[/white]\n"
+            f"[bold]Short URL:[/bold] [magenta]{short_url_display}[/magenta]\n"
+            f"[bold]Target URL:[/bold] [magenta]{target_url_display}[/magenta]\n"
+            f"[bold]Type:[/bold] {qr_type_display}"
         )
 
         if not hide_scans:
             output += (
+                "\n"
                 f"[bold]Total Scans:[/bold] {total_scans}\n"
-                f"[bold]Unique Scans:[/bold] {unique_scans}\n"
+                f"[bold]Unique Scans:[/bold] {unique_scans}"
             )
 
         console.print()
@@ -118,8 +117,8 @@ def fetch_qr_codes(access_token, start_date, end_date):
         if is_dynamic and isinstance(total_scans, int):
             total_scans_all_time += total_scans
 
-    console.print(f"\n[bold blue]Total Static QR Codes: {static_qr_count}[/bold blue]")
-    console.print(f"[bold blue]Total Dynamic QR Codes: {dynamic_qr_count}[/bold blue]")
+    console.print(f"\n[bold magenta]Total Static QR Codes: {static_qr_count}[/bold magenta]")
+    console.print(f"[bold magenta]Total Dynamic QR Codes: {dynamic_qr_count}[/bold magenta]")
     console.print(f"\n[bold magenta]Total Scans for all QR Codes: {total_scans_all_time}[/bold magenta]\n")
 
     download_csv = Prompt.ask("[bold cyan]Do you want to download the data as CSV? (y/n)", default=None)
