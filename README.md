@@ -24,9 +24,7 @@ A Python script that allows you to fetch, analyze, and export QR code data from 
 
 2. Ensure you have your **QR Code Generator API access token**. You can get it from your paid QRCG account [QR Code Generator's API section](https://www.qr-code-generator.com/). The token is required for authenticating API requests.
 
-3. Run the script:
-
-python3 qrcg_statistics.py
+3. Run the script: **python3 qrcg_statistics.py**
 
 4. The script will prompt you to **enter your API access token**
 
@@ -46,9 +44,7 @@ python3 qrcg_statistics.py
 
 ## CSV Export
 
-After displaying the QR code data in the terminal, the script will prompt if you want to export the data to a CSV file:
-
-    Do you want to download the data as CSV? (y/n)
+After displaying the QR code data in the terminal, the script will prompt if you want to export the data to a CSV file (y/n).
 
 If you choose `y`, the script will create a CSV file with the following columns:
 - **Created**: The creation date of the QR code.
