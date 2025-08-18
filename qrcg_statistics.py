@@ -81,8 +81,8 @@ def fetch_qr_codes(access_token, start_date, end_date):
                 static_qr_count += 1
                 hide_scans = True
 
-            short_url_display = short_url if short_url else "[red]No Short URL - Static QR Code[/red]"
-            target_url_display = target_url if target_url else f"[red]No Target URL - {type_name} QR Code[/red]"
+            short_url_display = short_url if short_url else "[red]No Short URL - Static[/red]"
+            target_url_display = target_url if target_url else f"[red]No Target URL - {type_name}[/red]"
 
             output = (
                 f"[bold]Created:[/bold] {created}\n"
@@ -117,9 +117,9 @@ def fetch_qr_codes(access_token, start_date, end_date):
             if is_dynamic and isinstance(total_scans, int):
                 total_scans_all_time += total_scans
 
-    console.print(f"\n[bold magenta]Total Static QR Codes:[/bold magenta] [cyan]{static_qr_count}[/cyan]")
-    console.print(f"[bold magenta]Total Dynamic QR Codes:[/bold magenta] [cyan]{dynamic_qr_count}[/cyan]")
-    console.print(f"\n[bold magenta]Total Scans for all QR Codes:[/bold magenta] [cyan]{total_scans_all_time}[/cyan]\n")
+    console.print(f"\n[bold magenta]Total number of Static QR Codes:[/bold magenta] [cyan]{static_qr_count}[/cyan]")
+    console.print(f"[bold magenta]Total number of Dynamic QR Codes:[/bold magenta] [cyan]{dynamic_qr_count}[/cyan]")
+    console.print(f"\n[bold magenta]Aggregate Total Scans for all Dynamic QR Codes:[/bold magenta] [cyan]{total_scans_all_time}[/cyan]\n")
 
     download_csv = Prompt.ask("[bold cyan]📥 Do you want to download the data as CSV? (y/n)", default=None)
     if download_csv is None:
