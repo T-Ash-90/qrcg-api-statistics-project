@@ -4,7 +4,6 @@ import re
 from rich.console import Console
 from rich.prompt import Prompt
 from rich.panel import Panel
-from rich.progress import track
 from datetime import datetime
 
 console = Console()
@@ -24,7 +23,7 @@ def fetch_qr_codes(access_token, start_date, end_date):
     max_pages = 9999
 
     with console.status("[bold green]Fetching QR codes...") as status:
-        for page in track(range(1, max_pages + 1), description="Fetching pages", total=max_pages):
+        for page in range(1, max_pages + 1):
             url = f"{base_url}&page={page}"
             try:
                 response = requests.get(url)
@@ -46,76 +45,77 @@ def fetch_qr_codes(access_token, start_date, end_date):
                 console.print(f"[bold red]An error occurred while fetching page {page}:[/bold red] {e}")
                 break
 
-    for qr in track(qr_codes, description="Processing QR codes..."):
-        created = qr.get("created", "N/A")
-        title = qr.get("title", None)
-        short_url = qr.get("short_url", "")
-        target_url = qr.get("target_url")
-        type_name = qr.get("type_name", "Unknown")
-        total_scans = qr.get("total_scans", 0)
-        unique_scans = qr.get("unique_scans", 0)
+    with console.status("[bold green]Processing QR codes...") as status:
+        for qr in qr_codes:
+            created = qr.get("created", "N/A")
+            title = qr.get("title", None)
+            short_url = qr.get("short_url", "")
+            target_url = qr.get("target_url")
+            type_name = qr.get("type_name", "Unknown")
+            total_scans = qr.get("total_scans", 0)
+            unique_scans = qr.get("unique_scans", 0)
 
-        is_dynamic = bool(short_url)
-        qr_code_type = "Dynamic" if is_dynamic else "Static"
-        qr_type_display = f"{qr_code_type} - {type_name}"
+            is_dynamic = bool(short_url)
+            qr_code_type = "Dynamic" if is_dynamic else "Static"
+            qr_type_display = f"{qr_code_type} - {type_name}"
 
-        if not title:
-            title = target_url if target_url else f"My {type_name}"
+            if not title:
+                title = target_url if target_url else f"My {type_name}"
 
-        try:
-            if 'T' in created:
-                qr_date = datetime.strptime(created, "%Y-%m-%dT%H:%M:%S.%fZ")
+            try:
+                if 'T' in created:
+                    qr_date = datetime.strptime(created, "%Y-%m-%dT%H:%M:%S.%fZ")
+                else:
+                    qr_date = datetime.strptime(created, "%Y-%m-%d %H:%M:%S")
+            except ValueError:
+                qr_date = None
+
+            if qr_date and start_date != "all time" and end_date != "all time":
+                if qr_date < start_date or qr_date > end_date:
+                    continue
+
+            if is_dynamic:
+                dynamic_qr_count += 1
+                hide_scans = False
             else:
-                qr_date = datetime.strptime(created, "%Y-%m-%d %H:%M:%S")
-        except ValueError:
-            qr_date = None
+                static_qr_count += 1
+                hide_scans = True
 
-        if qr_date and start_date != "all time" and end_date != "all time":
-            if qr_date < start_date or qr_date > end_date:
-                continue
+            short_url_display = short_url if short_url else "[red]No Short URL - Static QR Code[/red]"
+            target_url_display = target_url if target_url else f"[red]No Target URL - {type_name} QR Code[/red]"
 
-        if is_dynamic:
-            dynamic_qr_count += 1
-            hide_scans = False
-        else:
-            static_qr_count += 1
-            hide_scans = True
-
-        short_url_display = short_url if short_url else "[red]No Short URL - Static QR Code[/red]"
-        target_url_display = target_url if target_url else f"[red]No Target URL - {type_name} QR Code[/red]"
-
-        output = (
-            f"[bold]Created:[/bold] [white]{created}[/white]\n"
-            f"[bold]Short URL:[/bold] [magenta]{short_url_display}[/magenta]\n"
-            f"[bold]Target URL:[/bold] [magenta]{target_url_display}[/magenta]\n"
-            f"[bold]Type:[/bold] {qr_type_display}"
-        )
-
-        if not hide_scans:
-            output += (
-                "\n"
-                f"[bold]Total Scans:[/bold] {total_scans}\n"
-                f"[bold]Unique Scans:[/bold] {unique_scans}"
+            output = (
+                f"[bold]Created:[/bold] [white]{created}[/white]\n"
+                f"[bold]Short URL:[/bold] [magenta]{short_url_display}[/magenta]\n"
+                f"[bold]Target URL:[/bold] [magenta]{target_url_display}[/magenta]\n"
+                f"[bold]Type:[/bold] {qr_type_display}"
             )
 
-        console.print()
-        console.print(Panel(output, title=f"{title}", expand=False))
+            if not hide_scans:
+                output += (
+                    "\n"
+                    f"[bold]Total Scans:[/bold] {total_scans}\n"
+                    f"[bold]Unique Scans:[/bold] {unique_scans}"
+                )
 
-        row = {
-            "Created": remove_rich_formatting(created),
-            "Title": remove_rich_formatting(title),
-            "Short URL": remove_rich_formatting(short_url),
-            "Target URL": remove_rich_formatting(target_url),
-            "Solution Type": remove_rich_formatting(type_name),
-            "QR Code Type": qr_code_type,
-            "Total Scans": remove_rich_formatting(str(total_scans)) if is_dynamic else "",
-            "Unique Scans": remove_rich_formatting(str(unique_scans)) if is_dynamic else "",
-        }
+            console.print()
+            console.print(Panel(output, title=f"{title}", expand=False))
 
-        qr_code_data.append(row)
+            row = {
+                "Created": remove_rich_formatting(created),
+                "Title": remove_rich_formatting(title),
+                "Short URL": remove_rich_formatting(short_url),
+                "Target URL": remove_rich_formatting(target_url),
+                "Solution Type": remove_rich_formatting(type_name),
+                "QR Code Type": qr_code_type,
+                "Total Scans": remove_rich_formatting(str(total_scans)) if is_dynamic else "",
+                "Unique Scans": remove_rich_formatting(str(unique_scans)) if is_dynamic else "",
+            }
 
-        if is_dynamic and isinstance(total_scans, int):
-            total_scans_all_time += total_scans
+            qr_code_data.append(row)
+
+            if is_dynamic and isinstance(total_scans, int):
+                total_scans_all_time += total_scans
 
     console.print(f"\n[bold magenta]Total Static QR Codes: {static_qr_count}[/bold magenta]")
     console.print(f"[bold magenta]Total Dynamic QR Codes: {dynamic_qr_count}[/bold magenta]")
