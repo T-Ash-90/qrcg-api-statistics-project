@@ -20,7 +20,7 @@ def fetch_qr_codes(access_token, start_date, end_date):
     total_scans_all_time = 0
     qr_code_data = []
 
-    max_pages = 9999
+    max_pages = 50000
 
     with console.status("[bold green]Fetching QR codes...") as status:
         for page in range(1, max_pages + 1):
@@ -85,9 +85,9 @@ def fetch_qr_codes(access_token, start_date, end_date):
             target_url_display = target_url if target_url else f"[red]No Target URL - {type_name} QR Code[/red]"
 
             output = (
-                f"[bold]Created:[/bold] [white]{created}[/white]\n"
-                f"[bold]Short URL:[/bold] [magenta]{short_url_display}[/magenta]\n"
-                f"[bold]Target URL:[/bold] [magenta]{target_url_display}[/magenta]\n"
+                f"[bold]Created:[/bold] {created}\n"
+                f"[bold]Short URL:[/bold] [cyan]{short_url_display}[/cyan]\n"
+                f"[bold]Target URL:[/bold] [cyan]{target_url_display}[/cyan]\n"
                 f"[bold]Type:[/bold] {qr_type_display}"
             )
 
@@ -99,7 +99,7 @@ def fetch_qr_codes(access_token, start_date, end_date):
                 )
 
             console.print()
-            console.print(Panel(output, title=f"{title}", expand=False))
+            console.print(Panel(output, title=f"[bold]{title}[/bold]", expand=False))
 
             row = {
                 "Created": remove_rich_formatting(created),
@@ -117,11 +117,11 @@ def fetch_qr_codes(access_token, start_date, end_date):
             if is_dynamic and isinstance(total_scans, int):
                 total_scans_all_time += total_scans
 
-    console.print(f"\n[bold magenta]Total Static QR Codes: {static_qr_count}[/bold magenta]")
-    console.print(f"[bold magenta]Total Dynamic QR Codes: {dynamic_qr_count}[/bold magenta]")
-    console.print(f"\n[bold magenta]Total Scans for all QR Codes: {total_scans_all_time}[/bold magenta]\n")
+    console.print(f"\n[bold magenta]Total Static QR Codes:[/bold magenta] [cyan]{static_qr_count}[/cyan]")
+    console.print(f"[bold magenta]Total Dynamic QR Codes:[/bold magenta] [cyan]{dynamic_qr_count}[/cyan]")
+    console.print(f"\n[bold magenta]Total Scans for all QR Codes:[/bold magenta] [cyan]{total_scans_all_time}[/cyan]\n")
 
-    download_csv = Prompt.ask("[bold cyan]Do you want to download the data as CSV? (y/n)", default=None)
+    download_csv = Prompt.ask("[bold cyan]📥 Do you want to download the data as CSV? (y/n)", default=None)
     if download_csv is None:
         download_csv = 'n'
 
@@ -141,21 +141,27 @@ def fetch_qr_codes(access_token, start_date, end_date):
         console.print(f"[bold green]CSV file '{filename}' has been successfully saved![/bold green]")
 
 if __name__ == "__main__":
-    console.print("[bold cyan]QR Code Generator API Data Fetcher[/bold cyan]")
+    console.print("[bold cyan]📱 QRCG API: Bulk QR Code Statistics[/bold cyan]")
 
-    access_token = Prompt.ask("🔑 Enter your API access token")
+    access_token = Prompt.ask("[bold green]🔑 Enter your API access token[/bold green]")
 
-    start_date_input = Prompt.ask("📅 Enter QR Code creation start date (YYYY-MM-DD) or leave blank for", default="all time")
-    end_date_input = Prompt.ask("📅 Enter QR Code creation end date (YYYY-MM-DD) or leave blank for", default="all time")
+    specify_date_range = Prompt.ask("[bold cyan]📅 Would you like to specify date ranges (y/n)?[/bold cyan]", default="n").lower()
 
-    if start_date_input != "all time":
-        start_date = datetime.strptime(start_date_input, "%Y-%m-%d")
+    if specify_date_range == "y":
+        start_date_input = Prompt.ask("[bold cyan]⏩ 📅 Search for QR Codes created from (YYYY-MM-DD)[/bold cyan]")
+        end_date_input = Prompt.ask("[bold cyan]📅 ⏪ Search for QR Codes created until (YYYY-MM-DD)[/bold cyan]")
+
+        if start_date_input != "all time":
+            start_date = datetime.strptime(start_date_input, "%Y-%m-%d")
+        else:
+            start_date = "all time"
+
+        if end_date_input != "all time":
+            end_date = datetime.strptime(end_date_input, "%Y-%m-%d")
+        else:
+            end_date = "all time"
     else:
         start_date = "all time"
-
-    if end_date_input != "all time":
-        end_date = datetime.strptime(end_date_input, "%Y-%m-%d")
-    else:
         end_date = "all time"
 
     fetch_qr_codes(access_token, start_date, end_date)
