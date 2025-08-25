@@ -6,7 +6,7 @@ A Python script to fetch, analyze, and export QR code data from the [QR Code Gen
 
 - Fetch static and dynamic QR codes from the API.
 - Filter QR codes by creation date (optional).
-- Display QR code details: title, short URL, target URL, total scans, unique scans.
+- Display fetched QR code details in the terminal.
 - Export fetched data to a CSV.
 - Optionally request granular QR code data for each QR code, generating individual CSV files for each QR Code ID.
 
@@ -21,7 +21,7 @@ A Python script to fetch, analyze, and export QR code data from the [QR Code Gen
 
 1. Clone the repository or download the script.
 2. Obtain a QR Code Generator API access token from your QR Code Generator account.
-3. Run the script.
+3. Run the main script (qr_statistics.py).
 4. Enter your API token when prompted.
 5. Optionally, specify a date range to filter QR codes.
 6. View QR code data in the terminal and export it to a CSV if desired.
