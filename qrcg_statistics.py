@@ -1,3 +1,6 @@
+# qrcg_statistics.py
+
+import os
 import requests
 import csv
 import re
@@ -48,6 +51,7 @@ def fetch_qr_codes(access_token, start_date, end_date):
     with console.status("[bold green]Processing QR codes...") as status:
         for qr in qr_codes:
             created = qr.get("created", "N/A")
+            id = qr.get("id", "N/A")
             title = qr.get("title", None)
             short_url = qr.get("short_url", "")
             target_url = qr.get("target_url")
@@ -85,7 +89,8 @@ def fetch_qr_codes(access_token, start_date, end_date):
             target_url_display = target_url if target_url else f"[red]No Target URL - {type_name}[/red]"
 
             output = (
-                f"[bold]Created:[/bold] {created}\n"
+                f"[bold]ID:[/bold] {id}\n"
+                f"[bold]Created:[/bold]{created}\n"
                 f"[bold]Short URL:[/bold] [cyan]{short_url_display}[/cyan]\n"
                 f"[bold]Target URL:[/bold] [cyan]{target_url_display}[/cyan]\n"
                 f"[bold]Type:[/bold] {qr_type_display}"
@@ -102,6 +107,7 @@ def fetch_qr_codes(access_token, start_date, end_date):
             console.print(Panel(output, title=f"[bold]{title}[/bold]", expand=False))
 
             row = {
+                "ID": remove_rich_formatting(str(id)),
                 "Created": remove_rich_formatting(created),
                 "Title": remove_rich_formatting(title),
                 "Short URL": remove_rich_formatting(short_url),
@@ -126,9 +132,16 @@ def fetch_qr_codes(access_token, start_date, end_date):
         download_csv = 'n'
 
     if download_csv.lower() == "y":
-        filename = f"qr_codes_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv"
+        # Define the folder where the file will be saved
+        folder_name = "CSV Downloads"
+
+        if not os.path.exists(folder_name):
+            os.makedirs(folder_name)
+
+        filename = os.path.join(folder_name, f"qrcg_statistics_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv")
+
         fieldnames = [
-            "Created", "Title", "Short URL", "Target URL",
+            "ID", "Created", "Title", "Short URL", "Target URL",
             "Solution Type", "QR Code Type",
             "Total Scans", "Unique Scans"
         ]
